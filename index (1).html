@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Web-based Animal Recognition System</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+        body {
+            margin: 0;
+            background: #121212;
+            color: #e0e0e0;
+            font-family: 'Poppins', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 2rem;
+        }
+        
+        h1 {
+            color: #90caf9;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+        
+        #upload-label {
+            background-color: #1e88e5;
+            padding: 15px 25px;
+            border-radius: 10px;
+            cursor: pointer;
+            user-select: none;
+            font-weight: 600;
+            box-shadow: 0 5px 15px rgba(30, 136, 229, 0.4);
+            transition: background-color 0.3s ease;
+        }
+        
+        #upload-label:hover {
+            background-color: #1565c0;
+        }
+        
+        #upload-input {
+            display: none;
+        }
+        
+        #image-container {
+            margin-top: 1.5rem;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 8px 24px rgba(14, 30, 37, 0.12);
+            max-width: 480px;
+            max-height: 480px;
+            width: 100%;
+        }
+        
+        #input-image {
+            width: 100%;
+            height: auto;
+            display: none;
+        }
+        
+        #results {
+            margin-top: 1.5rem;
+            width: 100%;
+            max-width: 480px;
+            background: #212121;
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(14, 30, 37, 0.12);
+        }
+        
+        #results h2 {
+            margin-top: 0;
+            font-weight: 600;
+            color: #f48fb1;
+        }
+        
+        ul {
+            list-style-type: none;
+            padding-left: 0;
+            margin-top: 0.5rem;
+        }
+        
+        li {
+            margin-bottom: 0.7rem;
+            font-size: 1.1rem;
+            letter-spacing: 0.02em;
+        }
+        
+        #loading {
+            margin-top: 1.5rem;
+            font-style: italic;
+            color: #90caf9;
+        }
+        
+        footer {
+            margin-top: auto;
+            font-size: 0.875rem;
+            color: #666;
+            user-select: none;
+            margin-top: 3rem;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Animal Recognition System</h1>
+
+    <label for="upload-input" id="upload-label">📁 Upload Image</label>
+    <input type="file" accept="image/*" id="upload-input" />
+
+    <div id="image-container">
+        <img id="input-image" alt="Uploaded Image" />
+    </div>
+
+    <div id="loading">Loading model, please wait...</div>
+
+    <div id="results" hidden>
+        <h2>Recognition Results</h2>
+        <ul id="result-list"></ul>
+    </div>
+
+    <footer>Powered by TensorFlow.js MobileNet Model</footer>
+    <h5>Developed by:-Gaurav Kurmi </h5>
+
+
+    <!-- TensorFlow.js -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.21.0/dist/tf.min.js"></script>
+    <!-- MobileNet model -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet"></script>
+
+    <script>
+        const uploadInput = document.getElementById('upload-input');
+        const inputImage = document.getElementById('input-image');
+        const resultsDiv = document.getElementById('results');
+        const resultList = document.getElementById('result-list');
+        const loadingText = document.getElementById('loading');
+
+        let model;
+
+        async function loadModel() {
+            loadingText.textContent = 'Loading MobileNet model, please wait...';
+            model = await mobilenet.load();
+            loadingText.textContent = 'Model loaded. Upload an image to recognize animals.';
+        }
+
+        uploadInput.addEventListener('change', async(e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const imageUrl = URL.createObjectURL(file);
+            inputImage.src = imageUrl;
+            inputImage.style.display = 'block';
+            resultsDiv.hidden = true;
+            loadingText.textContent = 'Analyzing image...';
+
+            // Wait for image to load before prediction
+            inputImage.onload = async() => {
+                const predictions = await model.classify(inputImage);
+
+                // Filter predictions for common animal classes (a subset)
+                const animalKeywords = [
+                    'dog', 'cat', 'bird', 'horse', 'cow', 'sheep',
+                    'elephant', 'bear', 'zebra', 'giraffe', 'lion', 'tiger',
+                    'wolf', 'fox', 'panda', 'rabbit', 'deer'
+                ];
+
+                const filtered = predictions.filter(p =>
+                    animalKeywords.some(animal => p.className.toLowerCase().includes(animal))
+                );
+
+                resultList.innerHTML = '';
+                if (filtered.length === 0) {
+                    resultList.innerHTML = '<li>No animals detected confidently.</li>';
+                } else {
+                    filtered.forEach(pred => {
+                        const li = document.createElement('li');
+                        li.textContent = `${pred.className} - ${(pred.probability * 100).toFixed(2)}%`;
+                        resultList.appendChild(li);
+                    });
+                }
+                resultsDiv.hidden = false;
+                loadingText.textContent = '';
+            };
+        });
+
+        loadModel();
+    </script>
+    <script src="animal.py"></script>
+</body>
+
+</html>
